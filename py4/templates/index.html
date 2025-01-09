@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>City Weather</title>
+
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #333333; /* 纯灰黑色背景 */
+            position: relative;
+            overflow: hidden;
+            font-family: Arial, sans-serif; /* 设置全局字体为Arial */
+            color: #FFFFFF; /* 设置全局文字颜色为白色 */
+        }
+
+        #weatherList {
+            position: relative;
+            z-index: 1;
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            top: 50px;
+            max-height: 300px; /* 设置最大高度 */
+            overflow-y: auto; /* 允许垂直滚动 */
+        }
+
+        #weatherList li {
+            background-color: #f9f9f9;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px; /* 设置列表项字体大小 */
+            color: #0000FF; /* 设置列表项字体颜色为蓝色 */
+        }
+
+        #weatherList li:hover {
+            background-color: #e0e0e0;
+        }
+
+        button {
+            margin: 5px;
+            font-size: 16px; /* 设置按钮字体大小 */
+            padding: 10px; /* 增加按钮内边距 */
+        }
+
+        h1, h2, form {
+            position: relative;
+            z-index: 1;
+            text-align: center; /* 文字居中 */
+            margin: 20px 0; /* 增加上下外边距 */
+            font-size: 24px; /* 设置标题和表单字体大小 */
+        }
+
+        /* 保持表单输入框的样式 */
+        input, button {
+            background-color: #FFFFFF; /* 白色背景 */
+            border: 1px solid #CCCCCC; /* 灰色边框 */
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 16px; /* 设置输入框和按钮字体大小 */
+        }
+
+        /* 保持按钮的样式 */
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>City Weather</h1>
+    <button onclick="updateWeather()">Update</button>
+    <button onclick="resetCities()">Reset Cities</button>
+    <h2>Add City</h2>
+    <form id="addCityForm">
+        <input type="text" id="country" placeholder="Country" required>
+        <input type="text" id="capital" placeholder="Capital" required>
+        <input type="text" id="latitude" placeholder="Latitude" required>
+        <input type="text" id="longitude" placeholder="Longitude" required>
+        <button type="submit">Add City</button>
+    </form>
+    <ul id="weatherList"></ul>
+
+    <script>
+        async function updateWeather() {
+            const response = await fetch('/weather');
+            const weatherData = await response.json();
+            const weatherList = document.getElementById('weatherList');
+            weatherList.innerHTML = '';
+            weatherData.forEach(city => {
+                const item = document.createElement('li');
+                item.textContent = `${city.capital}, ${city.country}: ${city.temperature}°C`;
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => removeCity(city.capital);
+                item.appendChild(deleteButton);
+                weatherList.appendChild(item);
+            });
+        }
+
+        async function removeCity(cityName) {
+            await fetch(`/remove_city/${cityName}`, { method: 'DELETE' });
+            await updateWeather();
+        }
+
+        async function resetCities() {
+            await fetch('/reset_cities', { method: 'POST' });
+            await updateWeather();
+        }
+
+        document.getElementById('addCityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const country = document.getElementById('country').value;
+            const capital = document.getElementById('capital').value;
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const response = await fetch('/add_city', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    country: country,
+                    capital: capital,
+                    latitude: latitude.toString(),
+                    longitude: longitude.toString()
+                })
+            });
+            if (response.ok) {
+                await updateWeather();
+            } else {
+                console.error('Failed to add city');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateWeather();
+        });
+    </script>
+</body>
+</html>
